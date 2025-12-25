@@ -1,9 +1,8 @@
-﻿// Controllers/FlightController.cs
-using FlightSearchApi.Models;
-using FlightSearchApi.Services;
+﻿using AIRPORT.Models;
+using AIRPORT.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FlightSearchApi.Controllers
+namespace AIRPORT.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -23,11 +22,21 @@ namespace FlightSearchApi.Controllers
                 return BadRequest("Please provide 'from' and 'to' city codes.");
 
             var result = _service.GetShortestPath(from.ToUpper(), to.ToUpper());
-
-            if (result.Status == "Success")
-                return Ok(result);
-
+            if (result.Status == "Success") return Ok(result);
             return NotFound(result);
+        }
+
+        [HttpGet("airports")]
+        public IActionResult GetAirports()
+        {
+            return Ok(_service.GetAvailableAirports());
+        }
+
+        // --- THIS WAS MISSING! ---
+        [HttpGet("locations")]
+        public IActionResult GetLocations()
+        {
+            return Ok(_service.GetAirportLocations());
         }
     }
 }

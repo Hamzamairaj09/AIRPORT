@@ -1,20 +1,19 @@
-﻿// Models/FlightModels.cs
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace FlightSearchApi.Models
+namespace AIRPORT.Models
 {
-    // Represents a single flight connection (Edge)
     public class FlightEdge
     {
         public string From { get; set; }
         public string To { get; set; }
-        public int Price { get; set; } // This is the "Weight" of the edge
+        public int Price { get; set; }
+        public string FlightNo { get; set; } // <--- Stores "PK-302", "EK-600" etc.
     }
 
-    // Represents the final output for Hamza's UI
     public class RouteResult
     {
         public List<string> Route { get; set; } = new List<string>();
+        public List<string> FlightCodes { get; set; } = new List<string>(); // <--- List of flight numbers for the route
         public int TotalPrice { get; set; }
         public string Status { get; set; }
     }
