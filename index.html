@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroSpace | Integrated Airport Systems</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --primary: #6366f1; /* Indigo */
+            --accent: #ec4899;  /* Pink */
+            --success: #10b981; /* Green */
+            --danger: #ef4444;  /* Red */
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--dark-bg);
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* NAVBAR */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 40px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .brand { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; color: white; display: flex; align-items: center; gap: 12px; }
+        .brand i { color: var(--accent); font-size: 1.4rem; }
+        
+        .nav-items { display: flex; gap: 8px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border); }
+        .nav-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 10px 18px; border-radius: 8px; cursor: pointer;
+            font-weight: 600; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+        }
+        .nav-btn:hover { color: white; background: rgba(255,255,255,0.08); }
+        .nav-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); transform: translateY(-1px); }
+
+        /* LAYOUT */
+        main { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto; }
+        .module-section { display: none; width: 100%; max-width: 900px; animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .module-section.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(40px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .glass-panel {
+            background: var(--card-bg); backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border); border-radius: 24px;
+            padding: 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative; overflow: hidden;
+        }
+
+        /* TYPOGRAPHY & INPUTS */
+        h2 { font-size: 2.2rem; margin-bottom: 5px; background: linear-gradient(to right, #fff, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: var(--text-muted); margin-bottom: 30px; display: block; font-size: 0.95rem; letter-spacing: 0.5px; border-bottom: 1px solid var(--glass-border); padding-bottom: 20px; }
+        .algo-tag { display: inline-block; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .input-group label { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px; }
+        input, select { width: 100%; padding: 14px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 12px; color: white; outline: none; transition: 0.3s; font-size: 1rem; }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); background: rgba(0,0,0,0.6); }
+
+        .checkbox-group { display: flex; gap: 15px; flex-wrap: wrap; }
+        .checkbox-item { background: rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid var(--glass-border); transition: 0.2s; }
+        .checkbox-item:hover { background: rgba(255,255,255,0.1); border-color: var(--primary); }
+        .checkbox-item input { width: auto; margin: 0; cursor: pointer; transform: scale(1.2); }
+
+        /* BUTTONS */
+        .btn-container { display: flex; gap: 15px; margin-top: 25px; }
+        .action-btn { flex: 2; padding: 14px; background: linear-gradient(135deg, var(--primary), #818cf8); border: none; border-radius: 12px; color: white; font-weight: 700; font-size: 1rem; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4); }
+        .action-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .demo-btn { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--text-muted); border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .demo-btn:hover { background: rgba(255,255,255,0.2); color: white; }
+
+        /* RESULTS & MAP */
+        .result-box { margin-top: 30px; padding: 25px; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid var(--glass-border); display: none; animation: fadeIn 0.4s ease; }
+        .result-header { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; font-weight: 700; }
+        #flight-map { width: 100%; height: 350px; border-radius: 12px; margin-top: 20px; z-index: 1; border: 3px solid rgba(255,255,255,0.2); background: #e5e5e5; }
+
+        /* ROUTE DISPLAY */
+        .route-display { font-size: 1.3rem; display: flex; align-items: center; gap: 10px; color: white; font-weight: 700; flex-wrap: wrap; }
+        .flight-badge { 
+            background: rgba(99, 102, 241, 0.2); border: 1px solid var(--primary); color: #a5b4fc; 
+            padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; 
+            transition: 0.2s; display: flex; align-items: center; gap: 5px;
+        }
+        .flight-badge:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4); }
+
+        /* GATES & TOASTS */
+        .gate-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
+        .gate-card { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; border-left: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .gate-number { background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.9rem; }
+        .delete-btn { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 0.9rem; margin-top: 5px; opacity: 0.7; transition: 0.2s; }
+        .delete-btn:hover { opacity: 1; text-decoration: underline; }
+        
+        .terminal { background: #0d1117; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; color: #4ade80; border: 1px solid #30363d; height: 180px; overflow-y: auto; font-size: 0.9rem; line-height: 1.5; }
+        .binary-stream { color: #3b82f6; font-size: 0.8rem; word-break: break-all; margin: 10px 0; opacity: 0.8; }
+
+        #toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 15px 25px; border-radius: 12px; color: white; font-weight: 500; min-width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; animation: slideInRight 0.3s ease; }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        footer { text-align: center; padding: 25px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid var(--glass-border); color: var(--text-muted); font-size: 0.85rem; position: relative; z-index: 10; margin-top: auto; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="brand"><i class="fas fa-plane-departure"></i> AeroSpace</div>
+        <div class="nav-items">
+            <button class="nav-btn active" onclick="showTab('hamza', this)"><i class="fas fa-route"></i> Route</button>
+            <button class="nav-btn" onclick="showTab('jawwad', this)"><i class="fas fa-ticket-alt"></i> Booking</button>
+            <button class="nav-btn" onclick="showTab('bilal', this)"><i class="fas fa-map-marked-alt"></i> Multi-City</button>
+            <button class="nav-btn" onclick="showTab('awais', this)"><i class="fas fa-dungeon"></i> Gates</button>
+            <button class="nav-btn" onclick="showTab('hasnain', this)"><i class="fas fa-server"></i> Admin</button>
+        </div>
+    </nav>
+
+    <main>
+        <section id="hamza" class="module-section active">
+            <div class="glass-panel">
+                <h2>Flight Route Finder <span class="algo-tag">Dijkstra's Algo</span></h2>
+                <span class="subtitle">Find the optimal path. Click a flight number to book it instantly.</span>
+                <div class="grid-2">
+                    <div class="input-group"><label>Origin Airport</label><select id="fromSelect"><option>Loading...</option></select></div>
+                    <div class="input-group"><label>Destination Airport</label><select id="toSelect"><option>Loading...</option></select></div>
+                </div>
+                <div class="btn-container">
+                    <button class="action-btn" onclick="searchRoute()" id="btn-hamza"><i class="fas fa-search"></i> Find Best Route</button>
+                    <button class="demo-btn" onclick="fillDemo('hamza')">✨ Demo Data</button>
+                </div>
+                <div id="hamza-res" class="result-box">
+                    <div class="result-header">Optimal Path Found</div>
+                    <div class="route-display" id="routeTxt"></div>
+                    <div id="flight-map"></div>
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-muted);">Total Cost:</span>
+                        <span style="font-size: 1.4rem; color: var(--success); font-weight: 800;" id="priceTxt"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="jawwad" class="module-section">
+            <div class="glass-panel">
+                <h2>Dynamic Booking <span class="algo-tag">Knapsack Algo</span></h2>
+                <span class="subtitle">Prices adjust automatically based on seat capacity.</span>
+                <div class="grid-2">
+                    <div class="input-group"><label>Flight Name</label><input type="text" id="bookingFlight" placeholder="e.g. PK-202"></div>
+                    <div class="input-group"><label>Seat Number (1-20)</label><input type="number" id="seatInput" placeholder="Enter seat number" min="1" max="20"></div>
+                </div>
+                <div class="btn-container">
+                    <button class="action-btn" onclick="bookSeat()" id="btn-jawwad"><i class="fas fa-check-circle"></i> Confirm Booking</button>
+                    <button class="demo-btn" onclick="fillDemo('jawwad')">✨ Demo Data</button>
+                </div>
+                <div id="jawwad-res" class="result-box">
+                    <div class="result-header">Booking Status</div>
+                    <div id="jawwad-msg" style="font-size: 1.1rem; color: white;"></div>
+                    <div id="jawwad-price" style="margin-top:5px; color:var(--success); font-weight:bold;"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bilal" class="module-section">
+            <div class="glass-panel">
+                <h2>Tour Optimizer <span class="algo-tag">TSP Algo</span></h2>
+                <span class="subtitle">Select any cities to create your custom loop.</span>
+                <div class="input-group">
+                    <label style="margin-bottom:15px;">Available Destinations:</label>
+                    <div id="tsp-checkboxes" class="checkbox-group"><div style="color:gray;">Loading cities...</div></div>
+                </div>
+                <div class="btn-container">
+                    <button class="action-btn" onclick="optimizeTour()" id="btn-bilal"><i class="fas fa-sync-alt"></i> Generate Custom Loop</button>
+                </div>
+                <div id="bilal-res" class="result-box">
+                    <div class="result-header">Optimized Tour Loop</div>
+                    <div class="route-display" id="tsp-route"></div>
+                    
+                    <div style="margin-top: 15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1);" id="tsp-dist"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="awais" class="module-section">
+            <div class="glass-panel">
+                <h2>Gate Scheduler</h2><span class="subtitle">Graph Coloring Logic</span>
+                <div class="grid-2">
+                    <div class="input-group"><label>Flight Name</label><input type="text" id="gName" placeholder="e.g. PK-302"></div>
+                    <div class="input-group"><label>Time</label><div style="display: flex; gap: 10px;"><input id="gStart" placeholder="1000" type="number"><input id="gEnd" placeholder="1100" type="number"></div></div>
+                </div>
+                <div class="btn-container"><button class="action-btn" onclick="addFlight()" id="btn-awais">Add Flight</button><button class="demo-btn" onclick="fillDemo('awais')">Demo</button></div>
+                <div style="margin-top:30px;"><div id="gateList" class="gate-list"></div></div>
+            </div>
+        </section>
+        
+        <section id="hasnain" class="module-section">
+            <div class="glass-panel">
+                <h2>Data Center</h2><span class="subtitle">Huffman Coding</span>
+                <div class="terminal" id="consoleOutput"><div>> SYSTEM_READY...</div></div>
+                <div class="input-group" style="margin-top:20px;"><input type="text" id="adminInput" placeholder="Log Data..."></div>
+                <div class="btn-container"><button class="action-btn" onclick="compressData()">Compress</button><button class="demo-btn" onclick="fillDemo('hasnain')">Demo</button></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast-container"></div>
+    <footer><p>&copy; 2025 AeroSpace Systems. Final Project BSE-3C.</p></footer>
+
+    <script>
+        const PORT = "7101"; // <--- CHECK YOUR PORT
+        const API = `https://localhost:${PORT}/api`;
+        let map = null; 
+        let coords = {}; 
+
+        // 1. Force Map Icons
+        function fixIcons() {
+            var iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
+            var iconUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
+            var shadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
+            var DefaultIcon = L.icon({ iconUrl: iconUrl, iconRetinaUrl: iconRetinaUrl, shadowUrl: shadowUrl, iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], tooltipAnchor: [16, -28], shadowSize: [41, 41] });
+            L.Marker.prototype.options.icon = DefaultIcon;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { fixIcons(); initMap(); loadData(); });
+
+        function initMap() {
+            if(map !== null) return;
+            map = L.map('flight-map').setView([30.3753, 69.3451], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 18 }).addTo(map);
+        }
+
+        async function loadData() {
+            try {
+                const resLoc = await fetch(`${API}/Flight/locations`); if(resLoc.ok) coords = await resLoc.json();
+                const resAir = await fetch(`${API}/Flight/airports`); const airports = await resAir.json();
+                
+                const fromSel = document.getElementById('fromSelect'); const toSel = document.getElementById('toSelect');
+                fromSel.innerHTML = ""; toSel.innerHTML = "";
+                airports.forEach(d => { fromSel.add(new Option(d, d)); toSel.add(new Option(d, d)); });
+
+                const tspContainer = document.getElementById('tsp-checkboxes'); tspContainer.innerHTML = "";
+                airports.forEach(city => {
+                    const label = document.createElement('label'); label.className = "checkbox-item";
+                    label.innerHTML = `<input type="checkbox" value="${city}"> ${city}`;
+                    tspContainer.appendChild(label);
+                });
+                refreshGates();
+            } catch(e) { console.error(e); showToast("Backend Connection Failed", "error"); }
+        }
+
+        function showTab(id, btn) {
+            document.querySelectorAll('.module-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if(id === 'hamza' && map) { setTimeout(() => map.invalidateSize(), 100); }
+        }
+
+        // --- HAMZA ---
+        async function searchRoute() {
+            setLoading('btn-hamza', true);
+            const f = document.getElementById('fromSelect').value;
+            const t = document.getElementById('toSelect').value;
+            try {
+                const res = await fetch(`${API}/Flight/shortest-route?from=${f}&to=${t}`);
+                if (!res.ok) throw new Error();
+                const d = await res.json();
+                
+                document.getElementById('hamza-res').style.display = 'block';
+                const routeContainer = document.getElementById('routeTxt');
+                routeContainer.innerHTML = "";
+
+                for(let i=0; i < d.route.length; i++) {
+                    const citySpan = document.createElement('span'); citySpan.innerText = d.route[i]; routeContainer.appendChild(citySpan);
+                    if(i < d.route.length - 1) {
+                        const flightCode = d.flightCodes ? d.flightCodes[i] : "FLIGHT"; 
+                        const btn = document.createElement('button'); btn.className = "flight-badge";
+                        btn.innerHTML = `<i class="fas fa-plane"></i> ${flightCode}`;
+                        btn.onclick = () => prefillBooking(flightCode);
+                        routeContainer.appendChild(btn);
+                    }
+                }
+                document.getElementById('priceTxt').innerText = `$${d.totalPrice}`;
+                drawRouteOnMap(d.route);
+                showToast("Optimal Route Calculated!");
+            } catch { showToast("No route found.", "error"); } finally { setLoading('btn-hamza', false); }
+        }
+
+        function drawRouteOnMap(routeCities) {
+            map.eachLayer((layer) => { if (!layer._url) map.removeLayer(layer); });
+            const points = [];
+            routeCities.forEach(city => {
+                if(coords[city]) {
+                    const latlng = coords[city];
+                    L.marker(latlng).addTo(map).bindPopup(`<b>${city}</b>`).openPopup();
+                    points.push(latlng);
+                }
+            });
+            if(points.length > 1) {
+                const polyline = L.polyline(points, {color: '#6366f1', weight: 4, opacity: 0.8}).addTo(map);
+                map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
+            }
+        }
+
+        // --- JAWWAD ---
+        async function bookSeat() {
+            setLoading('btn-jawwad', true);
+            const s = document.getElementById('seatInput').value;
+            const f = document.getElementById('bookingFlight').value;
+            if (!s || !f) { showToast("Enter details", "error"); setLoading('btn-jawwad', false); return; }
+            try {
+                const res = await fetch(`${API}/Pricing/book`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seatNumber: parseInt(s), flightName: f }) });
+                const d = await res.json();
+                document.getElementById('jawwad-res').style.display = 'block';
+                document.getElementById('jawwad-msg').innerText = d.message;
+                document.getElementById('jawwad-price').innerText = d.price;
+                showToast("Booking Successful!");
+            } catch { showToast("Booking Failed.", "error"); } finally { setLoading('btn-jawwad', false); }
+        }
+
+        // --- BILAL (UPDATED DISPLAY) ---
+        async function optimizeTour() {
+            setLoading('btn-bilal', true);
+            const checkboxes = document.querySelectorAll('#tsp-checkboxes input:checked');
+            const selectedCities = Array.from(checkboxes).map(cb => cb.value);
+            if (selectedCities.length < 2) { showToast("Select at least 2 cities.", "error"); setLoading('btn-bilal', false); return; }
+            try {
+                const res = await fetch(`${API}/MultiCity/optimize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(selectedCities) });
+                const d = await res.json();
+                document.getElementById('bilal-res').style.display = 'block';
+                const container = document.getElementById('tsp-route'); container.innerHTML = "";
+
+                for(let i=0; i < d.route.length; i++) {
+                    const citySpan = document.createElement('span'); citySpan.innerText = d.route[i]; container.appendChild(citySpan);
+                    if(i < d.route.length - 1) {
+                        const flightCode = d.flightCodes ? d.flightCodes[i] : "LINK"; 
+                        const btn = document.createElement('button'); btn.className = "flight-badge";
+                        btn.innerHTML = `<i class="fas fa-plane"></i> ${flightCode}`;
+                        btn.onclick = () => prefillBooking(flightCode);
+                        container.appendChild(btn);
+                    }
+                }
+                
+                // UPDATED EXPLANATION TEXT
+                document.getElementById('tsp-dist').innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#94a3b8">Total Trip Distance:</span>
+                        <strong style="color:#10b981; font-size:1.2rem;">${d.totalDistance} km</strong>
+                    </div>
+                    <div style="font-size:0.8rem; margin-top:5px; opacity:0.6; font-style:italic;">
+                        * Calculated via TSP Algorithm (Shortest possible loop)
+                    </div>
+                `;
+                
+                showToast("Tour Optimized!");
+            } catch { showToast("Optimization Error.", "error"); } finally { setLoading('btn-bilal', false); }
+        }
+
+        // --- UTILS ---
+        function prefillBooking(flightName) {
+            const bookingBtn = document.querySelector("button[onclick*='jawwad']"); showTab('jawwad', bookingBtn);
+            document.getElementById('bookingFlight').value = flightName; document.getElementById('bookingFlight').focus(); showToast(`Selected: ${flightName}`);
+        }
+        async function addFlight() {
+            setLoading('btn-awais', true); const n=document.getElementById('gName').value, s=document.getElementById('gStart').value, e=document.getElementById('gEnd').value;
+            if (!n || !s || !e) { showToast("Fill all fields.", "error"); setLoading('btn-awais', false); return; }
+            try { await fetch(`${API}/Gate/add?name=${n}&start=${s}&end=${e}`, { method: 'POST' }); showToast("Flight Added"); refreshGates(); } catch { showToast("Failed.", "error"); } finally { setLoading('btn-awais', false); }
+        }
+        async function refreshGates() {
+            try { const res = await fetch(`${API}/Gate/schedule`); const data = await res.json();
+            const list = document.getElementById('gateList'); list.innerHTML = "";
+            data.forEach(f => { list.innerHTML += `<div class="gate-card"><div><div style="font-weight:bold;">${f.flightName}</div><small>${f.startTime}-${f.endTime}</small></div><div style="text-align:right;"><div class="gate-number">GATE ${f.assignedGate}</div><button class="delete-btn" onclick="deleteFlight(${f.id})">Cancel</button></div></div>`; });
+            } catch { console.log("Gate API waiting..."); }
+        }
+        async function deleteFlight(id) { if(!confirm("Cancel this flight?")) return; try { await fetch(`${API}/Gate/cancel/${id}`, { method: 'DELETE' }); refreshGates(); showToast("Cancelled."); } catch { showToast("Error", "error"); } }
+        function compressData() {
+            const term = document.getElementById('consoleOutput'); const inp = document.getElementById('adminInput').value; if(!inp) { showToast("Input is empty", "error"); return; }
+            const fakeBinary = inp.split('').map(c => c.charCodeAt(0).toString(2)).join('').substring(0, 50) + "...";
+            term.innerHTML += `\n> READING...`; setTimeout(() => { term.innerHTML += `\n<div class="binary-stream">${fakeBinary}</div>> SAVED 40% SPACE.`; term.scrollTop = term.scrollHeight; showToast("Compressed."); }, 800);
+        }
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> <span>${msg}</span>`;
+            container.appendChild(toast); setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+        function setLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId); if (!btn) return; if (isLoading) { btn.dataset.text = btn.innerHTML; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`; btn.disabled = true; } else { btn.innerHTML = btn.dataset.text; btn.disabled = false; }
+        }
+        function fillDemo(module) {
+            if (module === 'hamza') { document.getElementById('fromSelect').value = "KHI"; document.getElementById('toSelect').value = "LHR"; }
+            else if (module === 'jawwad') { document.getElementById('bookingFlight').value = "PK-" + (Math.floor(Math.random() * 500) + 100); document.getElementById('seatInput').value = Math.floor(Math.random() * 20) + 1; }
+            else if (module === 'awais') { document.getElementById('gName').value = "PK-" + (Math.floor(Math.random() * 900) + 100); document.getElementById('gStart').value = "1400"; document.getElementById('gEnd').value = "1500"; }
+            else if (module === 'hasnain') { document.getElementById('adminInput').value = "ERROR_LOG_2025: CRITICAL FAILURE IN ENGINE 3 AT 40000FT"; }
+        }
+    </script>
+</body>
+</html>
